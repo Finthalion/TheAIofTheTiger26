@@ -24,6 +24,21 @@ let relop_to_fun (op : relop) (v1 : Value.t) (v2 : Value.t) =
 let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
   match e.e_payload with
   | Const i -> (Int i, state)
+  | String str -> (String str, state)
+  | Lval id -> (read_lvalue state id)
+  | Let (chunk, exprs) -> let scope = State.enter_scope state in
+                          let ans, newscope = (eval_expr (eval_chunks scope chunk) exprs) in
+                            (ans, State.exit_scope newscope)
+  | Assign (left, right) -> let (value, newstate) = eval_expr state right in
+                              Void, (write_lvalue state left value)
+  (*| Seq l ->
+    (match l with
+    | [] -> Void, state
+    | exp::[] -> eval_expr state exp
+    | exp::  ->
+      let (value, newstate) = eval_expr state exp in
+        eval_expr newstate (Seq l)) *)
+
   (* evaluation from left to right *)
   | Funcall (name, args) ->
       let state, args =
@@ -74,8 +89,11 @@ and eval_chunk (state : State.t) (c : chunk) : State.t =
          into account, but the result is dicarded *)
       let _, state = eval_expr state e in
       state
-     (* complete the function and keep this wildcard card until it becomes redundant *)
-     | _ -> Format.asprintf "%a (%s)" Ast.print_chunk c __FUNCTION__ |> Utils.niy
+  (* complete the function and keep this wildcard card until it becomes redundant *)
+  | Vardec (id, _, expr) ->
+    let (value, newstate) = eval_expr state expr in
+      State.add_value id value newstate 
+  | _ -> Format.asprintf "%a (%s)" Ast.print_chunk c __FUNCTION__ |> Utils.niy
 
 open Value
 
