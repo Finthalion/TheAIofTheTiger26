@@ -158,6 +158,7 @@ let print out = function
 
 let concat = function
      (* complete the function *)
+     | (String s1)::(String s2)::[] -> String (s1 ^ s2)
      | _ -> Format.asprintf "(%s) not implemented" __FUNCTION__ |> Utils.niy
 
 let range = function
