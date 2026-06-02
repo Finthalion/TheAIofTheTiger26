@@ -31,13 +31,15 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
                             (ans, State.exit_scope newscope)
   | Assign (left, right) -> let (value, newstate) = eval_expr state right in
                               Void, (write_lvalue state left value)
-  (*| Seq l ->
+  | Seq l ->
     (match l with
     | [] -> Void, state
     | exp::[] -> eval_expr state exp
-    | exp::  ->
+    | exp::list  ->
       let (value, newstate) = eval_expr state exp in
-        eval_expr newstate (Seq l)) *)
+      let rest : expr = { e_loc = e.e_loc; e_payload = Seq list} in
+          eval_expr newstate rest
+    )
 
   (* evaluation from left to right *)
   | Funcall (name, args) ->
