@@ -40,7 +40,12 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
       let rest : expr = { e_loc = e.e_loc; e_payload = Seq list} in
           eval_expr newstate rest
     )
-
+  | Binop (e1, op, e2) ->
+      (let fn = binop_to_fun op in
+      let (v1, s1) = eval_expr state e1 in
+      let (v2, s2) = eval_expr s1 e2 in
+      (Int (fn (Value.cast_int e1.e_loc v1) (Value.cast_int e2.e_loc v2)), s2)
+    )
   (* evaluation from left to right *)
   | Funcall (name, args) ->
       let state, args =
