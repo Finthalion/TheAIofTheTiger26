@@ -32,7 +32,8 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
   | Assign (left, right) -> let (value, newstate) = eval_expr state right in
                               Void, (write_lvalue state left value)
   | Seq l ->
-    (match l with
+    (
+      match l with
     | [] -> Void, state
     | exp::[] -> eval_expr state exp
     | exp::list  ->
@@ -41,10 +42,33 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
           eval_expr newstate rest
     )
   | Binop (e1, op, e2) ->
-      (let fn = binop_to_fun op in
+    (
+      let fn = binop_to_fun op in
       let (v1, s1) = eval_expr state e1 in
       let (v2, s2) = eval_expr s1 e2 in
-      (Int (fn (Value.cast_int e1.e_loc v1) (Value.cast_int e2.e_loc v2)), s2)
+      let open Value in
+      (Int (fn (cast_int e1.e_loc v1) (cast_int e2.e_loc v2)), s2)
+    )
+  | Relop (e1, op, e2) ->
+    (
+      let fn = relop_to_fun op in
+      let (v1, s1) = eval_expr state e1 in
+      let (v2, s2) = eval_expr s1 e2 in
+      (Int (fn v1 v2), s2)
+    )
+  | IfThenElse (clause, thenexp, None) ->
+    (
+    let (clauseV, s1) = eval_expr state clause in
+    match clauseV with
+    | Int 0 -> (Void, s1)
+    | _ -> (eval_expr s1 thenexp)
+    )
+  | IfThenElse (clause, thenexp, Some elseexp) ->
+    (
+    let (clauseV, s1) = eval_expr state clause in
+    match clauseV with
+    | Int 0 -> (eval_expr s1 elseexp)
+    | _ -> (eval_expr s1 thenexp)
     )
   (* evaluation from left to right *)
   | Funcall (name, args) ->
