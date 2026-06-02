@@ -58,17 +58,27 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
     )
   | IfThenElse (clause, thenexp, None) ->
     (
-    let (clauseV, s1) = eval_expr state clause in
-    match clauseV with
-    | Int 0 -> (Void, s1)
-    | _ -> (eval_expr s1 thenexp)
+      let (clauseV, s1) = eval_expr state clause in
+      match clauseV with
+      | Int 0 -> (Void, s1)
+      | _ -> (eval_expr s1 thenexp)
     )
   | IfThenElse (clause, thenexp, Some elseexp) ->
     (
-    let (clauseV, s1) = eval_expr state clause in
-    match clauseV with
-    | Int 0 -> (eval_expr s1 elseexp)
-    | _ -> (eval_expr s1 thenexp)
+     let (clauseV, s1) = eval_expr state clause in
+     match clauseV with
+     | Int 0 -> (eval_expr s1 elseexp)
+     | _ -> (eval_expr s1 thenexp)
+    )
+  | While (clause, body) ->
+    (
+      let (clauseV, s1) = eval_expr state clause in
+      match clauseV with
+      | Int 0 -> (Void, s1)
+      | _ -> (
+        let (_, s2) = eval_expr s1 body in
+        eval_expr s2 e
+      )
     )
   (* evaluation from left to right *)
   | Funcall (name, args) ->
