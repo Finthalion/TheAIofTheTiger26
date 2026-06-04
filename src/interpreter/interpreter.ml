@@ -205,7 +205,7 @@ let concat = function
 
 let range = function
    (* complete the function *)
-   | (Int min, Int max) -> let open Driver in Random.int_in_range min max
+   | (Int e1)::(Int e2)::[] -> Int (Random.int_in_range ~min:e1 ~max:e2)
    | _ -> Format.asprintf "(%s) not implemented" __FUNCTION__ |> Utils.niy
 
 (* Evaluates a Tiger program with an optional output formatter.
