@@ -80,6 +80,11 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
         eval_expr s2 e
       )
     )
+  | ArrayInit (_, size, init) ->
+      let sizeVal, state = eval_expr state size in
+      let initVal, state = eval_expr state init in
+      let arr = Value.array_make (Value.cast_int size.e_loc sizeVal) initVal in
+      (arr, state)
   (* evaluation from left to right *)
   | Funcall (name, args) ->
       let state, args =
@@ -105,8 +110,12 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
 and write_lvalue (state : State.t) (lv : lvalue) (value : Value.t) : State.t =
   match lv.l_payload with
   | Var id -> State.update_value id value state
-     (* complete the function and keep this wildcard card until it becomes redundant *)
-     | _ -> Format.asprintf "%a (%s)" Ast.print_lvalue lv __FUNCTION__ |> Utils.niy
+  | Array (lval, index) ->
+    let arr, state = read_lvalue state lval in
+    let indexVal, state = eval_expr state index in
+    let _ = Value.array_set (Value.cast_array lval.l_loc arr) (Value.cast_int index.e_loc indexVal) value in
+    state
+  (* complete the function and keep this wildcard card until it becomes redundant *)
 
 (* Resolves an lvalue to the value it refers to, returning the value
    and the updated state.  This may involve evaluating subexpressions
@@ -116,8 +125,12 @@ and write_lvalue (state : State.t) (lv : lvalue) (value : Value.t) : State.t =
 and read_lvalue (state : State.t) (lv : lvalue) : Value.t * State.t =
   match lv.l_payload with
   | Var id -> (State.find_value id state, state)
-     (* complete the function and keep this wildcard card until it becomes redundant *)
-     | _ -> Format.asprintf "(%s)" __FUNCTION__ |> Utils.niy
+  | Array (lval, index) ->
+    let indexVal, state = eval_expr state index in
+    let arr, state = read_lvalue state lval in
+    let subscript = Value.array_get (Value.cast_array lval.l_loc arr) (Value.cast_int index.e_loc indexVal) in
+    (subscript, state)
+    (* complete the function and keep this wildcard card until it becomes redundant *)
 
 
 and eval_chunks (state : State.t) (chunks : chunk list) : State.t =
@@ -134,7 +147,7 @@ and eval_chunk (state : State.t) (c : chunk) : State.t =
   | Vardec (id, _, expr) ->
     let (value, newstate) = eval_expr state expr in
       State.add_value id value newstate 
-  | _ -> Format.asprintf "%a (%s)" Ast.print_chunk c __FUNCTION__ |> Utils.niy
+  | Typedec (_, _) -> state
 
 open Value
 
