@@ -85,6 +85,26 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
       let initVal, state = eval_expr state init in
       let arr = Value.array_make (Value.cast_int size.e_loc sizeVal) initVal in
       (arr, state)
+  | Boolop (left, And, right) ->
+    let leftVal, state = eval_expr state left in
+    (match leftVal with
+    | Int 0 -> (Int 0, state)
+    | _ -> let rightVal, state = eval_expr state right in
+      (match rightVal with
+      | Int 0 -> (Int 0, state)
+      | _ -> (Int 1, state)
+      )
+    )
+  | Boolop (left, Or, right) ->
+    let leftVal, state = eval_expr state left in
+    (match leftVal with
+    | Int 1 -> (Int 1, state)
+    | _ -> let rightVal, state = eval_expr state right in
+      (match rightVal with
+      | Int 0 -> (Int 0, state)
+      | _ -> (Int 1, state)
+      )
+    )
   (* evaluation from left to right *)
   | Funcall (name, args) ->
       let state, args =
@@ -97,7 +117,6 @@ let rec eval_expr (state : State.t) (e : expr) : Value.t * State.t =
       let func = State.find_fun name state in
       (func args, state)
      (* complete the function and keep this wildcard card until it becomes redundant *)
-     | _ -> Format.asprintf "(%s)" __FUNCTION__ |> Utils.niy
 
 (* Writes a value to the location referred to by the given lvalue,
    returning the updated state.  This may involve evaluating
